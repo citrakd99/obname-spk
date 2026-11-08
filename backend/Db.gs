@@ -10,7 +10,12 @@ const TABLES = {
   Periode_Items: ['periode_id', 'item_id', 'vol_forecast', 'vol_aktual', 'catatan'],
   Produktivitas: ['kategori', 'pekerjaan', 'komposisi', 'kap_min', 'kap_max', 'satuan'],
   Produktivitas_Map: ['item_id', 'ref', 'koef'],
-  Log: ['waktu', 'peran', 'aksi', 'detail']
+  Log: ['waktu', 'peran', 'aksi', 'detail'],
+  // Pekerja harian: salinan daftar pekerja HSE (tab Worker) + tanda harian & rate milik aplikasi ini
+  Pekerja: ['id', 'nama', 'position', 'company', 'category', 'induction', 'work_status', 'di_hse', 'harian', 'rate_harian', 'lembur_mode', 'rate_lembur_jam', 'catatan', 'synced_at'],
+  Harian_Absen: ['tanggal', 'worker_id', 'nama', 'jabatan', 'jam_masuk', 'jam_pulang', 'hari_mode', 'hari_manual', 'catatan', 'updated_at'],
+  Harian_Periode: ['no_ke', 'tgl_mulai', 'tgl_akhir', 'status', 'total', 'params', 'finalized_at'],
+  Harian_Klaim: ['no_ke', 'worker_id', 'nama', 'jabatan', 'hadir', 'hari', 'jam_normal', 'jam_lembur', 'rate_harian', 'rate_lembur', 'upah_normal', 'upah_lembur', 'total']
 };
 
 function ss_() {
@@ -25,6 +30,8 @@ function sheet_(name) {
 }
 
 function cell_(v) {
+  // sel berisi jam saja (mis. 08:00) dibaca Sheets sebagai tanggal 1899-12-30
+  if (Object.prototype.toString.call(v) === '[object Date]' && v.getFullYear() < 1901) return Utilities.formatDate(v, TZ, 'HH:mm');
   if (Object.prototype.toString.call(v) === '[object Date]') return Utilities.formatDate(v, TZ, 'yyyy-MM-dd');
   return v;
 }
@@ -42,6 +49,11 @@ function readTable_(name) {
     out.push(o);
   }
   return out;
+}
+
+/** Seperti readTable_, tetapi [] bila tab belum dibuat (deploy lama yang belum menjalankan setup ulang). */
+function tryTable_(name) {
+  return ss_().getSheetByName(name) ? readTable_(name) : [];
 }
 
 function toArr_(name, obj) {

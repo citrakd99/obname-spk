@@ -351,6 +351,15 @@ async function vSet() {
     <div class="card"><h2>Penandatangan di PDF</h2>
       ${[1, 2, 3].map(n => `<div class="grid2"><div>${f('sign' + n + '_label', 'Jabatan')}</div><div>${f('sign' + n + '_name', 'Nama')}</div></div>`).join('')}
       <div class="mut" style="margin-top:6px">Penandatangan ke-4 (Mandor) otomatis mengikuti mandor SPK.</div></div>
+    <div class="card"><h2>Pekerja harian</h2>
+      ${f('hse_sheet_id', 'ID spreadsheet HSE (daftar pekerja, tab Worker)')}
+      <div class="mut">Bagian di antara <code>/d/</code> dan <code>/edit</code> pada alamat spreadsheet. Hanya dibaca; akun pemasang backend cukup punya akses lihat.</div>
+      <div class="grid2"><div>${f('jam_masuk_std', 'Jam masuk standar', 'time')}</div><div>${f('jam_pulang_std', 'Jam pulang standar', 'time')}</div></div>
+      <div class="grid2"><div>${f('istirahat', 'Istirahat (jam, 12:00–13:00)', 'number', 'min="0" max="4" step="0.5"')}</div><div>${f('lembur_bulat', 'Pembulatan lembur (jam)', 'number', 'min="0.1" max="2" step="0.25"')}</div></div>
+      ${f('lembur_maks', 'Maksimal lembur per hari (jam)', 'number', 'min="0" max="12" step="0.5"')}
+      <div class="mut" style="margin-top:6px">Jam normal per hari memakai "Jam normal per hari" di kartu Hitungan.</div>
+      <div class="mut" style="margin-top:10px"><b>Penandatangan PDF klaim harian</b></div>
+      ${[1, 2, 3].map(n => `<div class="grid2"><div>${f('hsign' + n + '_label', 'Jabatan')}</div><div>${f('hsign' + n + '_name', 'Nama')}</div></div>`).join('')}</div>
     <div class="card"><div class="row"><h2>Mandor</h2><button class="btn sm sec" data-act="addm">＋ Tambah</button></div>
       ${d.mandor.map(m => `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)"><span>${esc(m.nama)}</span><span class="toolbar"><button class="btn sm sec" data-act="renm" data-id="${esc(m.id)}">Ubah</button><button class="btn sm sec" data-act="delm" data-id="${esc(m.id)}">Hapus</button></span></div>`).join('') || '<div class="mut" style="margin-top:8px">Belum ada mandor.</div>'}</div>
     <div class="card"><div class="row"><h2>SPK</h2><span class="toolbar"><button class="btn sm sec" data-act="pdfimp">📄 Impor PDF</button><button class="btn sm sec" data-act="addspk">＋ Tambah</button></span></div>

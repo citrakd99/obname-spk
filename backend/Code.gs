@@ -34,7 +34,7 @@ function doPost(e) {
   const auth = authenticate_(req.code);
   if (!auth.ok) return json_(auth);
 
-  const def = ACTIONS[req.action];
+  const def = ACTIONS[req.action] || (typeof HARIAN_ACTIONS !== 'undefined' ? HARIAN_ACTIONS[req.action] : undefined);
   if (!def) return json_(fail_('UNKNOWN_ACTION', 'Aksi tidak dikenal: ' + req.action));
   if (def.roles.indexOf(auth.role) < 0) return json_(fail_('FORBIDDEN', 'Peran "' + auth.role + '" tidak boleh menjalankan ' + req.action));
 
@@ -108,12 +108,16 @@ const CONFIG_SCHEMA = {
   project: 's', owner: 's', pekerjaan_default: 's',
   pctSpk: [1, 100], ret: [0, 100], jam: [1, 24], hariMg: [1, 7], lembur: [0, 100],
   basis: ['min', 'avg', 'max'], start: 'd',
-  sign1_label: 's', sign1_name: 's', sign2_label: 's', sign2_name: 's', sign3_label: 's', sign3_name: 's'
+  sign1_label: 's', sign1_name: 's', sign2_label: 's', sign2_name: 's', sign3_label: 's', sign3_name: 's',
+  hse_sheet_id: 's', jam_masuk_std: 't', jam_pulang_std: 't', istirahat: [0, 4], lembur_bulat: [0.1, 2], lembur_maks: [0, 12],
+  hsign1_label: 's', hsign1_name: 's', hsign2_label: 's', hsign2_name: 's', hsign3_label: 's', hsign3_name: 's'
 };
 const CONFIG_DEFAULTS = {
   project: 'Nama Proyek', owner: 'Nama Owner / Pemberi Kerja', pekerjaan_default: '',
   pctSpk: 80, ret: 5, jam: 8, hariMg: 7, lembur: 50, basis: 'avg', start: '',
-  sign1_label: 'Project Manager', sign1_name: '', sign2_label: 'Direktur', sign2_name: '', sign3_label: 'Mengetahui', sign3_name: ''
+  sign1_label: 'Project Manager', sign1_name: '', sign2_label: 'Direktur', sign2_name: '', sign3_label: 'Mengetahui', sign3_name: '',
+  hse_sheet_id: '', jam_masuk_std: '08:00', jam_pulang_std: '17:00', istirahat: 1, lembur_bulat: 0.5, lembur_maks: 4,
+  hsign1_label: 'Dibuat (QS)', hsign1_name: '', hsign2_label: 'Diperiksa (SM)', hsign2_name: '', hsign3_label: 'Disetujui (PM)', hsign3_name: ''
 };
 
 function hasFinal_(spkId) {
@@ -137,7 +141,9 @@ const ACTIONS = {
       periods: readTable_('Periode').map(clean),
       periodItems: readTable_('Periode_Items').map(clean),
       produktivitas: readTable_('Produktivitas').map(clean),
-      map: readTable_('Produktivitas_Map').map(clean)
+      map: readTable_('Produktivitas_Map').map(clean),
+      pekerja: tryTable_('Pekerja').map(clean),
+      harianPeriods: tryTable_('Harian_Periode').map(clean)
     };
   } },
 
@@ -149,6 +155,7 @@ const ACTIONS = {
       if (!rule) throw apiError_('VALIDATION', 'Pengaturan tidak dikenal: ' + k);
       let v = incoming[k];
       if (rule === 's') v = v === null || v === undefined ? '' : String(v).trim().slice(0, 200);
+      else if (rule === 't') { v = String(v || '').trim(); if (hhmm_(v) === null) throw apiError_('VALIDATION', k + ' harus jam HH:MM'); }
       else if (rule === 'd') { v = String(v || ''); if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw apiError_('VALIDATION', k + ' harus yyyy-mm-dd'); }
       else if (Array.isArray(rule) && typeof rule[0] === 'string') { if (rule.indexOf(v) < 0) throw apiError_('VALIDATION', k + ' harus salah satu: ' + rule.join(', ')); }
       else v = reqNum_(v, k, rule[0], rule[1]);

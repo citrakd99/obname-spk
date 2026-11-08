@@ -12,6 +12,15 @@ sim.X.setup();
 sim.props.CODE_QS = 'QS-DEMO'; sim.props.CODE_VIEW = 'VIEW-DEMO';
 const qs = (a, p) => { const r = sim.call('QS-DEMO', a, p); if (!r.ok) throw new Error(a + ': ' + JSON.stringify(r.error)); return r.data; };
 
+// spreadsheet HSE tiruan (tab Worker) dengan pekerja contoh campuran: staf, harian, subkon. ID spreadsheet: HSE-DEMO
+const HW = ['id', 'name', 'ktp', 'gender', 'category', 'company', 'induction', 'induction_date', 'violation', 'work_status', 'trainings', 'certifications', 'notes', 'created_by', 'created_at', 'updated_by', 'updated_at', 'violation_date', 'position'];
+const hw = (id, name, cat, company, ind, pos) => [id, name, '', 'L', cat, company, ind, '', '', 'Aktif', '', '', '', '', '', '', '', '', pos];
+sim.addExternal('HSE-DEMO', { Worker: [HW,
+  hw('W-001', 'Pekerja A', 'Pekerja', 'CV Mitra Contoh', 'Ya', 'Tukang Besi'), hw('W-002', 'Pekerja B', 'Pekerja', 'CV Mitra Contoh', 'Ya', 'Tukang Besi'),
+  hw('W-003', 'Pekerja C', 'Pekerja', 'CV Mitra Contoh', 'Ya', 'Helper / Kenek'), hw('W-004', 'Pekerja D', 'Pekerja', 'CV Mitra Contoh', 'Ya', 'Electrician'),
+  hw('W-005', 'Pekerja E', 'Pekerja', 'CV Mitra Contoh', '', 'Tukang Cat'), hw('W-006', 'Staf F', 'Staff', 'Kontraktor Contoh', 'Ya', 'Site Engineer'),
+  hw('W-007', 'Staf G', 'Staff', 'Kontraktor Contoh', 'Ya', 'HSE Officer / Safety Officer'), hw('W-008', 'Subkon H', 'Subcon', 'PT Subkon Contoh', 'Ya', 'Plumber')] });
+
 if (process.env.SEED !== '0' && !process.argv.includes('--empty')) {
   // data contoh (placeholder netral) supaya aplikasi langsung bisa dicoba
   qs('saveConfig', { values: { project: 'Proyek Contoh', owner: 'Owner Contoh', start: '2026-09-21', sign1_name: 'Nama PM', sign2_name: 'Nama Direktur', sign3_name: 'Nama Pihak Mengetahui' } });
@@ -35,6 +44,15 @@ if (process.env.SEED !== '0' && !process.argv.includes('--empty')) {
   qs('createPeriod', { spk_id: spk1 });
   [['Galian Tanah Biasa (Manual)', 0], ['Cor Beton Manual (Molen)', 0], ['Pemasangan Besi / Rakit di Lokasi', 10], ['Pasang Bata Ringan (Hebel)', 0], ['Plesteran Dinding (Tebal 15-20mm)', 20]]
     .forEach(([ref, koef], i) => qs('saveMap', { item_id: its[i].id, ref, koef }));
+  // pekerja harian contoh
+  qs('saveConfig', { values: { hse_sheet_id: 'HSE-DEMO', hsign1_name: 'Nama QS', hsign2_name: 'Nama SM', hsign3_name: 'Nama PM' } });
+  qs('syncHse');
+  [['W-001', 180000], ['W-002', 180000], ['W-003', 140000], ['W-004', 200000], ['W-005', 150000]].forEach(([id, r]) => qs('savePekerja', { id, harian: true, rate_harian: r }));
+  ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07'].forEach((tgl, d) => qs('saveAbsen', { tanggal: tgl, rows: [
+    { worker_id: 'W-001', hadir: true, jam_masuk: '08:00', jam_pulang: ['17:00', '19:00', '17:00', '20:30', '17:00', '15:00'][d] },
+    { worker_id: 'W-002', hadir: d !== 2, jam_masuk: '08:00', jam_pulang: '17:00' },
+    { worker_id: 'W-003', hadir: true, jam_masuk: '07:30', jam_pulang: ['17:00', '18:00', '21:00', '17:00', '17:00', '17:00'][d] },
+    { worker_id: 'W-004', hadir: d < 5, jam_masuk: '08:00', jam_pulang: '17:00' }] }));
 }
 
 const root = path.join(__dirname, '..', '..', 'web');

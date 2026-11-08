@@ -17,8 +17,14 @@ function setup() {
   // kolom yang harus tetap teks (mis. No. SPK "001" jangan jadi 1)
   ss.getSheetByName('SPK').getRange('B2:B').setNumberFormat('@');
   ss.getSheetByName('Periode').getRange('D2:E').setNumberFormat('@');
+  // tanggal & jam harian disimpan sebagai teks agar tidak diubah Sheets menjadi tanggal/jam
+  ss.getSheetByName('Harian_Absen').getRange('A2:A').setNumberFormat('@');
+  ss.getSheetByName('Harian_Absen').getRange('E2:F').setNumberFormat('@');
+  ss.getSheetByName('Harian_Periode').getRange('B2:C').setNumberFormat('@');
+  ss.getSheetByName('Pekerja').getRange('A2:A').setNumberFormat('@');
 
   const cfgSheet = ss.getSheetByName('Config');
+  cfgSheet.getRange('B2:B').setNumberFormat('@');
   if (cfgSheet.getLastRow() <= 1) {
     const rows = Object.keys(CONFIG_DEFAULTS).map(function (k) { return [k, CONFIG_DEFAULTS[k]]; });
     cfgSheet.getRange(2, 1, rows.length, 2).setValues(rows);

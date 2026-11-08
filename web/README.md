@@ -33,7 +33,10 @@ untuk menyimpannya di perangkat tersebut (kalau tidak, hanya berlaku selama tab 
 | Forecast manpower (acuan produktivitas + koefisien, jam normal/lembur) | ubah | lihat |
 | Master SPK (item, impor dari PDF SPK atau tempel dari Excel) | ubah | lihat |
 | PDF pengajuan A4 landscape (format sheet OBNAME) | draft & final | final saja |
-| ⚙ Pengaturan (proyek, retensi, jam kerja, penandatangan, mandor, SPK, log) | ✔ | – |
+| ⚙ Pengaturan (proyek, retensi, jam kerja, penandatangan, mandor, SPK, pekerja harian, log) | ✔ | – |
+| Pekerja harian · Daftar pekerja (sinkron dari HSE, tandai harian, rate, lembur auto/manual) | ✔ | lihat |
+| Pekerja harian · Absensi harian (jam masuk/pulang, isi otomatis jam standar, hari auto/manual) | ✔ | – |
+| Pekerja harian · Rekap & klaim, Final, PDF A4 potret (per pekerja + rekap) | ✔ | final saja |
 
 Isian cepat: di tabel Input, tekan Enter untuk turun ke baris berikutnya pada kolom yang sama.
 
@@ -66,5 +69,5 @@ ke pihak ketiga, hanya item hasil impor yang dikirim ke server Anda.
 ## Berkas
 
 `index.html` kerangka · `style.css` · `app.js` inti (sesi, API, navigasi, aksi) · `views.js` semua layar ·
-`import-pdf.js` impor PDF · `spkpdf.js` pembaca PDF SPK · `logic.js` rumus (salinan `backend/Logic.gs`) · `config.js`.
+`views-harian.js` modul pekerja harian · `import-pdf.js` impor PDF · `spkpdf.js` pembaca PDF SPK · `logic.js` rumus (salinan `backend/Logic.gs`) · `config.js`.
 Jika `backend/Logic.gs` berubah: `node web/sync-logic.js` (uji backend gagal bila `logic.js` tertinggal).

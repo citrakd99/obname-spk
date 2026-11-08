@@ -7,7 +7,7 @@ Backend berupa Web App Apps Script yang terikat ke satu Google Sheet. Peran dite
 
 1. Buat Google Sheet kosong (mis. "Obname SPK Data").
 2. Menu **Ekstensi → Apps Script**. Salin isi file di folder ini ke proyek script:
-   `Logic.gs`, `Db.gs`, `Code.gs`, `Seed.gs`, `Setup.gs`. Untuk `appsscript.json`: Project Settings → centang
+   `Logic.gs`, `Db.gs`, `Code.gs`, `Harian.gs`, `Seed.gs`, `Setup.gs`. Untuk `appsscript.json`: Project Settings → centang
    *Show "appsscript.json" manifest file*, lalu timpa isinya. (Tidak perlu menyalin folder `test`.)
 3. Pilih fungsi **`setup`** → **Run** → beri izin. Ini membuat 9 tab, mengisi Config default dan 62 baris
    tabel Produktivitas dari PDF standar.
@@ -57,6 +57,11 @@ async function api(code, action, payload = {}) {
 | `saveMap` | QS | `{item_id,ref,koef}` | Acuan produktivitas + koefisien kesulitan (0–60%) |
 | `manpower` | QS, Viewer | `{periode_id,ot?}` | Forecast manpower dari `vol_forecast` periode itu |
 | `getLog` | QS | `{limit?}` | Jejak audit |
+| `syncHse` | QS | – | Salin tab `Worker` spreadsheet HSE (hanya dibaca) ke tab `Pekerja` |
+| `savePekerja` | QS | `{id,harian?,rate_harian?,lembur_mode?,rate_lembur_jam?,catatan?}` | Tanda harian & rate (data HSE tidak bisa diubah) |
+| `getHarian` | QS, Viewer | `{no_ke}` | Absensi + rekap periode harian. Viewer hanya periode Final |
+| `saveAbsen` | QS | `{tanggal,rows:[{worker_id,hadir,jam_masuk,jam_pulang,hari_mode,hari_manual}]}` | Absensi satu tanggal |
+| `finalizeHarian` / `unlockHarian` | QS | `{no_ke,ack:true}` / `{no_ke,reason}` | Kunci klaim harian (rate & aturan dibekukan) / buka kunci |
 
 Gagal: `{"ok":false,"error":{"code","message","details"}}`. Kode: `BAD_CODE`, `LOCKED`, `FORBIDDEN`, `VALIDATION`,
 `NOT_FOUND`, `CONFIG_MISSING`, `BAD_STATE`, `ITEM_LOCKED`, `CONFIG_LOCKED`, `CHECK_FAILED`, `ACK_REQUIRED`, `BUSY`, `SERVER_ERROR`.
@@ -84,3 +89,21 @@ validasi, kunci data, manpower).
 - Kode bersama adalah pengamanan sederhana: siapa pun yang tahu kode punya peran itu. Ganti kode di Script Properties bila bocor.
 - Tidak ada pembatasan per mandor; Viewer melihat semua data.
 - Uji di atas memakai tiruan; langkah deploy ke akun Google Anda belum pernah dijalankan.
+
+## Modul pekerja harian
+
+- **Sumber daftar pekerja:** spreadsheet HSE, tab `Worker` (kolom `id`, `name`, `position`, `company`, `category`,
+  `induction`, `work_status`). Isi `hse_sheet_id` di Pengaturan. Akun yang memasang backend cukup punya akses **lihat** ke
+  spreadsheet HSE; aplikasi tidak pernah menulis ke sana dan hanya membaca tab `Worker` (kolom KTP tidak disalin).
+- **Sinkron** menyalin semua pekerja (campuran staf/harian/subkon) ke tab `Pekerja` sebagai *bukan harian*. QS mencentang
+  "Harian?" dan mengisi rate. Sinkron ulang memperbarui nama/jabatan/induction tetapi tidak menyentuh tanda harian & rate;
+  pekerja yang hilang dari HSE ditandai dan tidak bisa diabsen lagi.
+- **Syarat diabsen:** ada di HSE, ditandai harian, sudah induction (kolom `induction` terisi dan bukan "tidak/belum/no/0"),
+  rate harian > 0. Ditolak di server.
+- **Hitungan per hari:** jam kerja = pulang − masuk − istirahat (bila melewati 12:00–13:00); normal maks `jam`; lembur =
+  sisa, dibulatkan ke bawah per `lembur_bulat`, maks `lembur_maks`. Hari **auto** = 1 hari penuh (diberi peringatan bila
+  kurang dari jam normal) atau **manual** 0–1. Rate lembur/jam **auto** = rate harian ÷ jam normal, atau **manual** per pekerja.
+- **Periode:** kalender 2 mingguan yang sama (`start`), satu klaim untuk seluruh proyek. Saat Final, rate & aturan disalin
+  ke `Harian_Klaim` / `Harian_Periode.params` sehingga klaim lama tidak berubah.
+- **Deploy lama:** jalankan `setup` sekali lagi agar tab `Pekerja`, `Harian_Absen`, `Harian_Periode`, `Harian_Klaim` dibuat.
+- Uji: `node backend/test/harian.test.js` (spreadsheet HSE tiruan).

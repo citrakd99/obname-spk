@@ -148,3 +148,85 @@ function manpower_(lines, prodByName, cfg, ot) {
     hari_orang: pd, rata_rata_per_hari: days > 0 ? pd / days : 0
   };
 }
+
+/* ---------- Pekerja harian ---------- */
+// Daftar pekerja berasal dari spreadsheet HSE (tab Worker), disalin ke tab Pekerja. Hanya yang ditandai harian,
+// sudah induction, masih ada di HSE, dan punya rate yang boleh diabsen.
+function isTrue_(v) { return v === true || /^(true|ya|y|yes|1)$/i.test(String(v == null ? '' : v).trim()); }
+function inductionOk_(v) {
+  const s = String(v == null ? '' : v).trim().toLowerCase();
+  return !!s && !/^(0|no|n|tidak|belum|false|-|x)$/.test(s);
+}
+function hhmm_(t) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(t == null ? '' : t).trim());
+  if (!m) return null;
+  const h = +m[1], mi = +m[2];
+  return h > 23 || mi > 59 ? null : h * 60 + mi;
+}
+function harianEligible_(w) {
+  if (!w) return ['tidak terdaftar di daftar pekerja HSE'];
+  const r = [];
+  if (!isTrue_(w.di_hse)) r.push('sudah tidak ada di daftar HSE');
+  if (!isTrue_(w.harian)) r.push('tidak ditandai sebagai pekerja harian');
+  if (!inductionOk_(w.induction)) r.push('belum induction');
+  if (!(num_(w.rate_harian) > 0)) r.push('rate harian belum diisi');
+  return r;
+}
+/** Rate lembur per jam: auto = rate harian ÷ jam normal; manual = angka yang diisi. */
+function lemburRate_(w, cfg) {
+  return w.lembur_mode === 'manual' ? num_(w.rate_lembur_jam) : num_(w.rate_harian) / (num_(cfg.jam) || 8);
+}
+/**
+ * Upah satu hari. rec: {jam_masuk, jam_pulang, hari_mode ('auto'|'manual'), hari_manual}
+ * auto: dibayar 1 hari penuh walau kurang dari jam normal (diberi tanda `kurang`); manual: hari = hari_manual.
+ */
+function harianDay_(rec, w, cfg) {
+  const a = hhmm_(rec.jam_masuk), b = hhmm_(rec.jam_pulang), J = num_(cfg.jam) || 8;
+  if (a === null || b === null) return { err: 'jam masuk/pulang harus format HH:MM' };
+  if (b <= a) return { err: 'jam pulang harus setelah jam masuk' };
+  let jam = (b - a) / 60;
+  if (a <= 12 * 60 && b >= 13 * 60) jam -= num_(cfg.istirahat);
+  jam = Math.max(0, jam);
+  const normal = Math.min(jam, J), bulat = num_(cfg.lembur_bulat) || 0.5;
+  let lembur = Math.floor(Math.max(0, jam - J) / bulat + EPS) * bulat;
+  lembur = Math.min(lembur, num_(cfg.lembur_maks));
+  const manual = rec.hari_mode === 'manual';
+  const hari = manual ? num_(rec.hari_manual) : 1;
+  const rate = num_(w.rate_harian), rl = lemburRate_(w, cfg);
+  const un = roundRp_(hari * rate), ul = roundRp_(lembur * rl);
+  return { jam: round2_(jam), normal: round2_(normal), lembur: lembur, hari: hari, manual: manual, kurang: normal < J - EPS,
+    rate: rate, rate_lembur: rl, upah_normal: un, upah_lembur: ul, total: un + ul };
+}
+function harianNo_(date, cfg) {
+  if (!cfg.start || !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return null;
+  const d = (Date.parse(date + 'T00:00:00Z') - Date.parse(cfg.start + 'T00:00:00Z')) / 864e5;
+  return d < 0 ? null : Math.floor(d / 14) + 1;
+}
+function harianDates_(no, cfg) { const s = addDays_(cfg.start, (no - 1) * 14); return { tgl_mulai: s, tgl_akhir: addDays_(s, 13) }; }
+
+/** Rekap satu periode. workers: daftar pekerja (rate dipakai dari sini); absen: semua baris absensi. */
+function harianRekap_(no, workers, absen, cfg) {
+  const dt = harianDates_(no, cfg), J = num_(cfg.jam) || 8, byW = {}, per = {}, errors = [], warnings = [];
+  workers.forEach(function (w) { byW[w.id] = w; });
+  absen.filter(function (a) { return a.tanggal >= dt.tgl_mulai && a.tanggal <= dt.tgl_akhir; })
+    .sort(function (a, b) { return a.tanggal < b.tanggal ? -1 : a.tanggal > b.tanggal ? 1 : 0; })
+    .forEach(function (a) {
+      const w = byW[a.worker_id] || { id: a.worker_id, nama: a.nama, rate_harian: 0 };
+      let p = per[a.worker_id];
+      if (!p) p = per[a.worker_id] = { worker_id: a.worker_id, nama: a.nama || w.nama, jabatan: a.jabatan || w.position || '',
+        rate_harian: num_(w.rate_harian), rate_lembur: lemburRate_(w, cfg), hadir: 0, hari: 0, jam_normal: 0, jam_lembur: 0,
+        upah_normal: 0, upah_lembur: 0, total: 0, days: [] };
+      const c = harianDay_(a, w, cfg);
+      const base = { tanggal: a.tanggal, jam_masuk: a.jam_masuk, jam_pulang: a.jam_pulang, hari_mode: a.hari_mode || 'auto', catatan: a.catatan || '' };
+      if (c.err) { errors.push(a.tanggal + ' · ' + p.nama + ': ' + c.err); p.days.push(Object.assign(base, { err: c.err })); return; }
+      if (c.kurang && !c.manual) warnings.push(a.tanggal + ' · ' + p.nama + ': kerja ' + c.jam + ' jam (< ' + J + ') dihitung 1 hari penuh');
+      p.hadir++; p.hari += c.hari; p.jam_normal += c.normal; p.jam_lembur += c.lembur;
+      p.upah_normal += c.upah_normal; p.upah_lembur += c.upah_lembur; p.total += c.total;
+      p.days.push(Object.assign(base, c));
+    });
+  const list = Object.keys(per).map(function (k) { return per[k]; }).sort(function (a, b) { return String(a.nama).localeCompare(String(b.nama)); });
+  const total = list.reduce(function (s, p) {
+    s.hari += p.hari; s.jam_lembur += p.jam_lembur; s.upah_normal += p.upah_normal; s.upah_lembur += p.upah_lembur; s.total += p.total; return s;
+  }, { hari: 0, jam_lembur: 0, upah_normal: 0, upah_lembur: 0, total: 0 });
+  return { no_ke: no, tgl_mulai: dt.tgl_mulai, tgl_akhir: dt.tgl_akhir, pekerja: list, total: total, errors: errors, warnings: warnings };
+}

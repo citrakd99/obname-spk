@@ -6,7 +6,7 @@
 const fs = require('fs'), path = require('path'), vm = require('vm'), crypto = require('crypto');
 
 function createSim() {
-  const sheets = {}, props = {}, cacheMap = {};
+  const sheets = {}, props = {}, cacheMap = {}, external = {};
   function makeSheet(name) {
     const rows = [];
     // Sheets mengubah teks tanggal menjadi Date, kecuali kolom yang diformat teks (SPK, Periode)
@@ -38,7 +38,8 @@ function createSim() {
         insertSheet: n => (sheets[n] = makeSheet(n)),
         getSheets: () => Object.values(sheets), deleteSheet() {}
       }),
-      openById() { throw new Error('tidak dipakai'); }
+      // spreadsheet lain (mis. HSE) yang didaftarkan lewat sim.addExternal(id, {Tab: [[header...], [row...]]})
+    openById(id) { if (external[id]) return external[id]; throw new Error('Tidak punya akses ke spreadsheet ' + id); }
     },
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => { props[k] = v; } }) },
     CacheService: { getScriptCache: () => ({ get: k => cacheMap[k] || null, put: (k, v) => { cacheMap[k] = v; }, remove: k => { delete cacheMap[k]; } }) },
@@ -58,13 +59,19 @@ function createSim() {
   };
   vm.createContext(sandbox);
   const dir = path.join(__dirname, '..');
-  ['Logic.gs', 'Db.gs', 'Code.gs', 'Seed.gs', 'Setup.gs'].forEach(f =>
+  ['Logic.gs', 'Db.gs', 'Code.gs', 'Harian.gs', 'Seed.gs', 'Setup.gs'].forEach(f =>
     vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), sandbox, { filename: f }));
   vm.runInContext('globalThis.__x={doPost,doGet,setup,manpower_,PRODUKTIVITAS_SEED,TABLES}', sandbox);
   const X = sandbox.__x;
   const raw = body => X.doPost({ postData: { contents: body } }).getContent();
   const call = (code, action, payload) => JSON.parse(raw(JSON.stringify({ code, action, payload })));
-  return { X, sheets, props, cacheMap, raw, call };
+  const addExternal = (id, tabs) => {
+    const own = {};
+    Object.keys(tabs).forEach(t => { const sh = makeSheet('__ext_' + t); tabs[t].forEach(r => sh.rows.push(r.slice())); own[t] = sh; });
+    external[id] = { getSheetByName: n => own[n] || null, _tabs: own };
+    return own;
+  };
+  return { X, sheets, props, cacheMap, raw, call, addExternal };
 }
 
 module.exports = { createSim };
