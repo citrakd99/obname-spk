@@ -1,5 +1,5 @@
 /**
- * Server demo LOKAL: menyajikan folder pwa/ dan meniru endpoint Apps Script di POST /exec
+ * Server demo LOKAL: menyajikan folder web/ dan meniru endpoint Apps Script di POST /exec
  * memakai kode .gs asli + sheet tiruan (data hilang saat server dimatikan).
  * Jalankan:  node backend/test/dev-server.js        (port 8787, atau PORT=...)
  * Kode demo: QS = QS-DEMO , Viewer = VIEW-DEMO   (hanya untuk lokal)
@@ -12,8 +12,8 @@ sim.X.setup();
 sim.props.CODE_QS = 'QS-DEMO'; sim.props.CODE_VIEW = 'VIEW-DEMO';
 const qs = (a, p) => { const r = sim.call('QS-DEMO', a, p); if (!r.ok) throw new Error(a + ': ' + JSON.stringify(r.error)); return r.data; };
 
-if (process.env.SEED !== '0') {
-  // data contoh (placeholder netral) supaya PWA langsung bisa dicoba
+if (process.env.SEED !== '0' && !process.argv.includes('--empty')) {
+  // data contoh (placeholder netral) supaya aplikasi langsung bisa dicoba
   qs('saveConfig', { values: { project: 'Proyek Contoh', owner: 'Owner Contoh', start: '2026-09-21', sign1_name: 'Nama PM', sign2_name: 'Nama Direktur', sign3_name: 'Nama Pihak Mengetahui' } });
   const m1 = qs('saveMandor', { nama: 'Mandor A' }).id, m2 = qs('saveMandor', { nama: 'Mandor B' }).id;
   const spk1 = qs('saveSpk', { no_spk: '001', mandor_id: m1, pekerjaan: 'Sipil - Building 4' }).id;
@@ -37,7 +37,7 @@ if (process.env.SEED !== '0') {
     .forEach(([ref, koef], i) => qs('saveMap', { item_id: its[i].id, ref, koef }));
 }
 
-const root = path.join(__dirname, '..', '..', 'pwa');
+const root = path.join(__dirname, '..', '..', 'web');
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' };
 
@@ -49,6 +49,11 @@ http.createServer((req, res) => {
     let body = ''; req.on('data', c => body += c);
     req.on('end', () => { res.writeHead(200, { ...cors, 'Content-Type': 'application/json' }); res.end(sim.raw(body)); });
     return;
+  }
+  // hanya lokal: PDF contoh netral untuk mencoba impor SPK  ->  /test-fixtures/spk-contoh.pdf
+  if (url.pathname === '/test-fixtures/spk-contoh.pdf') {
+    res.writeHead(200, { 'Content-Type': 'application/pdf' });
+    return fs.createReadStream(path.join(__dirname, 'fixtures', 'spk-contoh.pdf')).pipe(res);
   }
   let f = path.normalize(path.join(root, url.pathname === '/' ? 'index.html' : url.pathname));
   if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('404'); }

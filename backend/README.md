@@ -59,7 +59,7 @@ async function api(code, action, payload = {}) {
 | `getLog` | QS | `{limit?}` | Jejak audit |
 
 Gagal: `{"ok":false,"error":{"code","message","details"}}`. Kode: `BAD_CODE`, `LOCKED`, `FORBIDDEN`, `VALIDATION`,
-`NOT_FOUND`, `BAD_STATE`, `ITEM_LOCKED`, `CONFIG_LOCKED`, `CHECK_FAILED`, `ACK_REQUIRED`, `BUSY`, `SERVER_ERROR`.
+`NOT_FOUND`, `CONFIG_MISSING`, `BAD_STATE`, `ITEM_LOCKED`, `CONFIG_LOCKED`, `CHECK_FAILED`, `ACK_REQUIRED`, `BUSY`, `SERVER_ERROR`.
 
 ## Aturan yang dijaga server
 
@@ -76,7 +76,7 @@ Gagal: `{"ok":false,"error":{"code","message","details"}}`. Kode: `BAD_CODE`, `L
 ```bash
 node backend/test/run.js
 ```
-Menjalankan 22 skenario terhadap tiruan layanan Google (alur penuh forecast → tracking → final → unlock, hak akses,
+Menjalankan 24 skenario terhadap tiruan layanan Google (alur penuh forecast → tracking → final → unlock, hak akses,
 validasi, kunci data, manpower).
 
 ## Batasan

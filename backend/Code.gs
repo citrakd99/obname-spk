@@ -221,6 +221,7 @@ const ACTIONS = {
     mustFind_('SPK', function (r) { return r.id === p.spk_id; }, 'SPK');
     const cfg = Object.assign({}, CONFIG_DEFAULTS, getConfig_());
     const all = readTable_('Periode').filter(function (x) { return x.spk_id === p.spk_id; });
+    if (!all.length && !cfg.start) throw apiError_('CONFIG_MISSING', 'Isi "Mulai periode #1" di Pengaturan dulu');
     const dates = nextPeriodDates_(all, cfg);
     const nextNo = all.reduce(function (a, x) { return Math.max(a, num_(x.no_ke)); }, 0) + 1;
     const anyOpen = all.some(function (x) { return x.status !== STATUS.FINAL; });

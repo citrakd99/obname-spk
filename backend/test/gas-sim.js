@@ -1,7 +1,7 @@
 /**
  * Simulator Google Apps Script: memuat semua file .gs ke satu konteks VM dengan tiruan
  * SpreadsheetApp / PropertiesService / CacheService / LockService / Utilities / ContentService.
- * Dipakai oleh run.js (uji) dan dev-server.js (demo lokal untuk PWA). BUKAN untuk produksi.
+ * Dipakai oleh run.js (uji) dan dev-server.js (demo lokal untuk aplikasi web). BUKAN untuk produksi.
  */
 const fs = require('fs'), path = require('path'), vm = require('vm'), crypto = require('crypto');
 

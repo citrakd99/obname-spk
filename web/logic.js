@@ -1,4 +1,4 @@
-// SALINAN OTOMATIS dari backend/Logic.gs. Jangan diedit; jalankan node pwa/sync-logic.js
+// SALINAN OTOMATIS dari backend/Logic.gs. Jangan diedit; jalankan node web/sync-logic.js
 /**
  * Logika murni (tanpa API Apps Script) supaya bisa diuji di Node.
  * Rumus mengikuti workbook spk-obname:

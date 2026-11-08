@@ -86,6 +86,16 @@ test('mandor, SPK (no "001" tetap teks), impor item + volume SPK 80%', () => {
 });
 
 let p1, p2;
+test('createPeriod tanpa "Mulai periode #1" -> pesan jelas, bukan SERVER_ERROR', () => {
+  const m = ok(qs('saveMandor', { nama: 'Mandor Uji Start' })).id;
+  const sp = ok(qs('saveSpk', { no_spk: '900', mandor_id: m, pekerjaan: 'x' })).id;
+  const cur = ok(qs('bootstrap')).config.start;
+  // kosongkan start langsung di sheet (aplikasi melarang mengubah setelah periode ada)
+  const rows = sheets.Config.rows; const r = rows.find(x => x[0] === 'start'); const keep = r[1]; r[1] = '';
+  err(qs('createPeriod', { spk_id: sp }), 'CONFIG_MISSING', 'start kosong');
+  r[1] = keep; assert.strictEqual(ok(qs('bootstrap')).config.start, cur);
+});
+
 test('periode: #1 Tracking mulai dari config.start, #2 Forecast, tanggal 14 hari berurutan', () => {
   const a = ok(qs('createPeriod', { spk_id: spk1 }));
   assert.deepStrictEqual([a.no_ke, a.status, a.tgl_mulai, a.tgl_akhir], [1, 'Tracking', '2026-09-21', '2026-10-04']);
@@ -230,11 +240,11 @@ test('kunci percobaan: 10 kode salah -> LOCKED (kode benar pun ditolak sementara
   assert.strictEqual(ok(qs('login')).role, 'qs');
 });
 
-test('pwa/logic.js identik dengan backend/Logic.gs (rumus server = rumus aplikasi)', () => {
+test('web/logic.js identik dengan backend/Logic.gs (rumus server = rumus aplikasi)', () => {
   const fs = require('fs'), path = require('path');
   const a = fs.readFileSync(path.join(__dirname, '..', 'Logic.gs'), 'utf8');
-  const b = fs.readFileSync(path.join(__dirname, '..', '..', 'pwa', 'logic.js'), 'utf8').split('\n').slice(1).join('\n'); // buang baris judul "SALINAN OTOMATIS"
-  assert.strictEqual(b, a, 'jalankan: node pwa/sync-logic.js');
+  const b = fs.readFileSync(path.join(__dirname, '..', '..', 'web', 'logic.js'), 'utf8').split('\n').slice(1).join('\n'); // buang baris judul "SALINAN OTOMATIS"
+  assert.strictEqual(b, a, 'jalankan: node web/sync-logic.js');
 });
 
 test('integritas: tidak ada baris tanpa id/duplikat id', () => {
