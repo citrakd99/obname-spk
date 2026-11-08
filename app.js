@@ -293,6 +293,7 @@ const ACT = {
     // kirim hanya yang berubah, supaya satu isian tidak menggagalkan yang lain
     const values = {}, cfg = S.data.config;
     document.querySelectorAll('[data-cfg]').forEach(el => { if (String(el.value) !== String(cfg[el.dataset.cfg] == null ? '' : cfg[el.dataset.cfg])) values[el.dataset.cfg] = el.value; });
+    if (values.hse_sheet_id !== undefined) values.hse_sheet_id = sheetIdOf_(values.hse_sheet_id); // alamat lengkap -> ID
     if (!Object.keys(values).length) return toast('Tidak ada perubahan', 'ok');
     try { await api('saveConfig', { values }); toast('Pengaturan tersimpan', 'ok'); await reload(); }
     catch (e) { if (/Pengaturan tidak dikenal/.test(e.message)) e.message += ' — backend masih versi lama; perbarui file .gs lalu buat versi deployment baru'; showErr(e); }
