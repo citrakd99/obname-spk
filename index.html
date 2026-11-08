@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Obname SPK</title>
+<meta name="description" content="Tracking, forecast 2 mingguan, dan pengajuan obname mandor">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<section id="login">
+  <div class="login-card">
+    <img src="icons/icon-192.png" width="64" height="64" alt="" style="border-radius:14px">
+    <h1>Obname SPK</h1>
+    <p class="mut" style="text-align:center;margin:0 0 14px">Masukkan kode akses untuk melanjutkan</p>
+    <div id="urlBox" hidden>
+      <label for="urlIn">Alamat server (URL Web App /exec)</label>
+      <input id="urlIn" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+    </div>
+    <label for="codeIn" style="margin-top:8px">Kode akses</label>
+    <input id="codeIn" type="password" autocomplete="off" style="text-align:center;letter-spacing:2px">
+    <label class="chk"><input type="checkbox" id="remember"> Ingat di perangkat ini</label>
+    <div class="err" id="loginErr"></div>
+    <button class="btn full" id="loginBtn">Masuk</button>
+    <button class="link" id="urlToggle" type="button">Ubah alamat server</button>
+  </div>
+</section>
+
+<div id="app" hidden>
+  <aside id="side">
+    <div class="brand">
+      <img src="icons/icon-192.png" width="36" height="36" alt="">
+      <div><b id="hTitle"></b><small>Obname SPK</small></div>
+    </div>
+    <div>
+      <div class="slab">SPK aktif</div>
+      <select id="spkSel" aria-label="Pilih SPK"></select>
+    </div>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <span id="roleTag" class="pill"></span>
+      <button class="sbtn qs-only" id="btnSet">⚙ Pengaturan</button>
+      <button class="sbtn" id="btnOut">⎋ Keluar</button>
+    </div>
+  </aside>
+  <div id="content">
+    <div id="banner" role="status"></div>
+    <main id="view"></main>
+  </div>
+</div>
+
+<input type="file" id="pdfIn" accept="application/pdf,.pdf" hidden>
+<dialog id="dlg"></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="printRoot"></div>
+
+<script src="config.js"></script>
+<script src="logic.js"></script>
+<script src="views.js"></script>
+<script src="import-pdf.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
