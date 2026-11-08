@@ -112,7 +112,7 @@ async function refresh() {
   pickSpk();
 }
 async function reload(render = true) {
-  try { await refresh(); if (render) { paintShell(); route(true); } }
+  try { await refresh(); S.hData = null; if (render) { paintShell(); route(true); } }
   catch (e) { showErr(e); }
 }
 
@@ -228,18 +228,19 @@ const confirmBox = (title, msg, okLabel) => new Promise(res => {
 });
 
 /* ---------- navigasi ---------- */
-const NAV = [['dash', '🏠', 'Beranda'], ['per', '🗓', 'Periode'], ['input', '✍️', 'Input forecast & aktual', true], ['man', '👷', 'Forecast manpower'], ['spk', '📋', 'Master SPK'], ['pdf', '📄', 'PDF pengajuan']];
-const VIEWS = { dash: vDash, per: vPer, input: vInput, final: vFinal, man: vMan, spk: vSpk, pdf: vPdf, set: vSet };
+const NAV = [['#', 'Obname SPK'], ['dash', '🏠', 'Beranda'], ['per', '🗓', 'Periode'], ['input', '✍️', 'Input forecast & aktual', true], ['man', '👷', 'Forecast manpower'], ['spk', '📋', 'Master SPK'], ['pdf', '📄', 'PDF pengajuan'],
+  ['#', 'Pekerja harian'], ['pek', '👥', 'Daftar pekerja'], ['absen', '🕘', 'Absensi harian', true], ['harian', '💰', 'Rekap & klaim']];
+const VIEWS = { dash: vDash, per: vPer, input: vInput, final: vFinal, man: vMan, spk: vSpk, pdf: vPdf, set: vSet, pek: vPek, absen: vAbsen, harian: vHarian };
 function go(v) { if (location.hash === '#' + v) route(); else location.hash = '#' + v; }
 function route(keepScroll) {
   if (!S.data) return;
   let v = (location.hash || '#dash').slice(1);
   if (!VIEWS[v]) v = 'dash';
-  if (S.role !== 'qs' && ['input', 'final', 'set'].includes(v)) v = 'dash';
+  if (S.role !== 'qs' && ['input', 'final', 'set', 'absen'].includes(v)) v = 'dash';
   S.view = v;
   const hl = v === 'final' ? 'input' : v;
   $('#nav').innerHTML = NAV.filter(n => !n[3] || S.role === 'qs')
-    .map(n => `<button data-nav="${n[0]}" class="${hl === n[0] ? 'on' : ''}"><i>${n[1]}</i>${n[2]}</button>`).join('');
+    .map(n => n[0] === '#' ? `<div class="grp">${n[1]}</div>` : `<button data-nav="${n[0]}" class="${hl === n[0] ? 'on' : ''}"><i>${n[1]}</i>${n[2]}</button>`).join('');
   banner();
   const y = window.scrollY;
   Promise.resolve(VIEWS[v]()).catch(showErr).then(() => { window.scrollTo(0, keepScroll ? y : 0); });
@@ -300,7 +301,35 @@ const ACT = {
       dialog('Log aktivitas', r.data.map(x => `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--line)"><b>${esc(x.aksi)}</b> <span class="mut">${esc(x.waktu)}</span><div class="mut" style="word-break:break-all">${esc(x.detail)}</div></div>`).join('') || '<div class="mut">Kosong</div>', [{ label: 'Tutup' }], true);
     } catch (e) { showErr(e); }
   },
-  logout: () => logout()
+  logout: () => logout(),
+  /* pekerja harian */
+  async synchse() {
+    try { const r = await api('syncHse'); toast(`Sinkron HSE: ${r.data.total} pekerja (${r.data.baru} baru, ${r.data.diperbarui} diperbarui, ${r.data.hilang} hilang)`, 'ok'); await reload(); }
+    catch (e) { showErr(e); }
+  },
+  pekf: ds => { S.pekF = ds.v; route(true); },
+  hday: ds => { const n = addDays_(S.hDate, +ds.v); if (n < S.data.config.start) return; S.hDate = n; route(true); },
+  hauto: () => {
+    const dr = absDraftOf(S.hDate), cfg = S.data.config; let k = 0;
+    (S.data.pekerja || []).filter(p => !harianEligible_(p).length).forEach(p => {
+      const r = dr[p.id]; if (r && r.hadir) return;
+      dr[p.id] = { hadir: true, jam_masuk: cfg.jam_masuk_std, jam_pulang: cfg.jam_pulang_std, hari_mode: 'auto', hari_manual: 1 }; k++;
+    });
+    toast(k ? `${k} pekerja diisi ${cfg.jam_masuk_std}–${cfg.jam_pulang_std} (belum disimpan)` : 'Semua pekerja sudah terisi', 'ok'); route(true);
+  },
+  hsave: () => saveAbsen(),
+  hno: ds => { S.hNo = +ds.v; route(); },
+  hprev: ds => { S.hPrev = ds.v; route(true); },
+  hprint: ds => printHarian(ds.v),
+  hfin() {
+    const H = S.hData;
+    dialog(`Finalkan klaim harian periode #${H.periode.no_ke}?`, `<p>Total ${rp(H.rekap.total.total)} untuk ${H.rekap.pekerja.length} pekerja. Setelah final, absensi periode ini terkunci dan rate saat ini dibekukan untuk klaim.</p>
+      ${H.rekap.warnings.length ? `<div class="lock draft">${H.rekap.warnings.length} catatan (mis. kurang dari jam normal dibayar penuh). Pastikan sudah dicek.</div>` : ''}
+      <label class="chk"><input type="checkbox" id="hAck"> Absensi sudah dicocokkan dengan data lapangan</label>`, [
+      { label: 'Batal' },
+      { label: 'Finalkan', cls: '', run: async d => { if (!$('#hAck', d).checked) throw new Error('Centang konfirmasi dulu'); const r = await api('finalizeHarian', { no_ke: H.periode.no_ke, ack: true }); toast('Klaim harian difinalkan 🔒', 'ok'); await refresh(); S.hData = r.data; route(true); } }]);
+  },
+  async hunlock() { const why = await askText('Buka kunci klaim harian', 'Alasan (wajib, tercatat di log)'); if (!why) return; try { await api('unlockHarian', { no_ke: S.hNo, reason: why }); toast('Kunci dibuka', 'ok'); await reload(); } catch (e) { showErr(e); } }
 };
 
 function wire() {
@@ -317,10 +346,16 @@ function wire() {
       updInput();
     } else if (t.matches('[data-mk]')) setMap(t.dataset.mk, { koef: Math.min(60, Math.max(0, parseFloat(t.value) || 0)) });
     else if (t.matches('#ack')) $('#btnFin').disabled = !t.checked || S.finBlock;
+    else if (t.matches('[data-pf]')) pekChanged(t.closest('tr'));
+    else if (t.matches('[data-af]') && t.type !== 'checkbox' && t.tagName !== 'SELECT') absChanged(t);
+    else if (t.matches('#pekQ')) { S.pekQ = t.value; vPek(); const q = $('#pekQ'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
   });
   document.addEventListener('change', e => {
     if (e.target.matches('[data-mref]')) setMap(e.target.dataset.mref, { ref: e.target.value });
     else if (e.target.matches('#pdfIn')) handlePdf(e.target.files[0]);
+    else if (e.target.matches('[data-af]') && (e.target.type === 'checkbox' || e.target.tagName === 'SELECT')) absChanged(e.target);
+    else if (e.target.matches('#hDateIn')) { if (e.target.value && e.target.value >= S.data.config.start) { S.hDate = e.target.value; route(true); } }
+    else if (e.target.matches('#hSel')) { S.hPrev = e.target.value; route(true); }
   });
   // Enter = turun ke baris berikutnya pada kolom yang sama (isian cepat)
   document.addEventListener('keydown', e => {
