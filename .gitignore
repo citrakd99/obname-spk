@@ -1,0 +1,8 @@
+# Hanya aplikasi (pwa/) dan backend/ yang masuk repo. File proyek asli (Excel, PDF berisi nama) tidak pernah diunggah.
+/*
+!/.gitignore
+!/README.md
+!/deploy.sh
+!/pwa/
+!/backend/
+!/.gitattributes
