@@ -7,7 +7,7 @@
  * Peran ditentukan KODE AKSES yang disimpan di Script Properties (CODE_QS, CODE_VIEW).
  * Kode tidak ada di frontend; server mencocokkannya pada setiap permintaan.
  */
-const API_VERSION = '1.1.0'; // naikkan setiap ada perubahan API; aplikasi web memeriksa versi minimum
+const API_VERSION = '1.1.1'; // naikkan setiap ada perubahan API; aplikasi web memeriksa versi minimum
 const MAX_FAILS = 10;           // gagal login berturut-turut sebelum dikunci
 const LOCK_SECONDS = 600;       // lama kunci (10 menit)
 
@@ -155,7 +155,7 @@ const ACTIONS = {
       const rule = CONFIG_SCHEMA[k];
       if (!rule) throw apiError_('VALIDATION', 'Pengaturan tidak dikenal: ' + k);
       let v = incoming[k];
-      if (rule === 's') v = v === null || v === undefined ? '' : String(v).trim().slice(0, 200);
+      if (rule === 's') v = k === 'hse_sheet_id' ? sheetIdOf_(v) : v === null || v === undefined ? '' : String(v).trim().slice(0, 200);
       else if (rule === 't') { v = String(v || '').trim(); if (hhmm_(v) === null) throw apiError_('VALIDATION', k + ' harus jam HH:MM'); }
       else if (rule === 'd') { v = String(v || ''); if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw apiError_('VALIDATION', k + ' harus yyyy-mm-dd'); }
       else if (Array.isArray(rule) && typeof rule[0] === 'string') { if (rule.indexOf(v) < 0) throw apiError_('VALIDATION', k + ' harus salah satu: ' + rule.join(', ')); }

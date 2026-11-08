@@ -230,3 +230,10 @@ function harianRekap_(no, workers, absen, cfg) {
   }, { hari: 0, jam_lembur: 0, upah_normal: 0, upah_lembur: 0, total: 0 });
   return { no_ke: no, tgl_mulai: dt.tgl_mulai, tgl_akhir: dt.tgl_akhir, pekerja: list, total: total, errors: errors, warnings: warnings };
 }
+
+/** Ambil ID spreadsheet dari ID polos atau alamat lengkap (…/spreadsheets/d/<ID>/edit…). */
+function sheetIdOf_(v) {
+  const s = String(v == null ? '' : v).trim();
+  const m = /\/d\/([a-zA-Z0-9_-]{20,})/.exec(s) || /[?&]id=([a-zA-Z0-9_-]{20,})/.exec(s);
+  return m ? m[1] : s;
+}

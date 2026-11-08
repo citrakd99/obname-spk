@@ -353,7 +353,7 @@ async function vSet() {
       <div class="mut" style="margin-top:6px">Penandatangan ke-4 (Mandor) otomatis mengikuti mandor SPK.</div></div>
     <div class="card"><h2>Pekerja harian</h2>
       ${f('hse_sheet_id', 'ID spreadsheet HSE (daftar pekerja, tab Worker)')}
-      <div class="mut">Bagian di antara <code>/d/</code> dan <code>/edit</code> pada alamat spreadsheet. Hanya dibaca; akun pemasang backend cukup punya akses lihat.</div>
+      <div class="mut">Boleh tempel alamat lengkap spreadsheet; ID-nya diambil otomatis. Hanya dibaca; akun pemasang backend cukup punya akses lihat.</div>
       <div class="grid2"><div>${f('jam_masuk_std', 'Jam masuk standar', 'time')}</div><div>${f('jam_pulang_std', 'Jam pulang standar', 'time')}</div></div>
       <div class="grid2"><div>${f('istirahat', 'Istirahat (jam, 12:00–13:00)', 'number', 'min="0" max="4" step="0.5"')}</div><div>${f('lembur_bulat', 'Pembulatan lembur (jam)', 'number', 'min="0.1" max="2" step="0.25"')}</div></div>
       ${f('lembur_maks', 'Maksimal lembur per hari (jam)', 'number', 'min="0" max="12" step="0.5"')}

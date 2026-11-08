@@ -7,11 +7,14 @@ const HARIAN_ACTIONS = {
   /** Baca tab Worker di spreadsheet HSE lalu salin ke tab Pekerja. Tanda harian & rate milik aplikasi ini tidak disentuh. */
   syncHse: { roles: ['qs'], write: true, fn: function () {
     const cfg = Object.assign({}, CONFIG_DEFAULTS, getConfig_());
-    const sid = String(cfg.hse_sheet_id || '').trim();
+    const sid = sheetIdOf_(cfg.hse_sheet_id);
     if (!sid) throw apiError_('CONFIG_MISSING', 'Isi "ID spreadsheet HSE" di Pengaturan dulu');
     let sh;
     try { sh = SpreadsheetApp.openById(sid).getSheetByName('Worker'); }
-    catch (e) { throw apiError_('HSE_UNREACHABLE', 'Spreadsheet HSE tidak bisa dibuka. Cek ID dan pastikan akun pemasang backend punya akses (lihat saja cukup).'); }
+    catch (e) {
+      throw apiError_('HSE_UNREACHABLE', 'Spreadsheet HSE tidak bisa dibuka. Cek ID dan pastikan akun pemasang backend punya akses (lihat saja cukup).',
+        ['ID yang dipakai: ' + sid, 'Pesan Google: ' + (e && e.message ? e.message : String(e))]);
+    }
     if (!sh) throw apiError_('HSE_UNREACHABLE', 'Tab "Worker" tidak ditemukan di spreadsheet HSE');
     const v = sh.getDataRange().getValues();
     const head = (v[0] || []).map(function (h) { return String(h).trim().toLowerCase(); });

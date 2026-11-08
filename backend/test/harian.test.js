@@ -15,6 +15,7 @@ let n = 0;
 const test = (name, fn) => { try { fn(); n++; console.log('  ok  ' + name); } catch (e) { process.exitCode = 1; console.log('  GAGAL  ' + name + '\n        ' + e.message); } };
 
 const HSE_ID = 'hse-uji-123';
+const HSE_ID_URL = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const HEAD = ['id', 'name', 'ktp', 'gender', 'category', 'company', 'induction', 'induction_date', 'violation', 'work_status', 'trainings', 'certifications', 'notes', 'created_by', 'created_at', 'updated_by', 'updated_at', 'violation_date', 'position'];
 const row = (id, name, cat, ind, pos) => [id, name, '3201xxxx', 'L', cat, 'CV Contoh', ind, '', '', 'Aktif', '', '', '', '', '', '', '', '', pos];
 const hse = sim.addExternal(HSE_ID, {
@@ -148,6 +149,14 @@ test('bootstrap tetap jalan di deploy lama tanpa tab harian', () => {
   const b = ok(qs('bootstrap'));
   assert.deepStrictEqual([b.pekerja, b.harianPeriods], [[], []]);
   ['Pekerja', 'Harian_Periode'].forEach(t => { sheets[t] = sheets['__bak_' + t]; delete sheets['__bak_' + t]; });
+});
+
+test('ID HSE boleh berupa alamat lengkap; galat Google ikut ditampilkan', () => {
+  ok(qs('saveConfig', { values: { hse_sheet_id: 'https://docs.google.com/spreadsheets/d/' + HSE_ID_URL + '/edit?usp=sharing' } }));
+  assert.strictEqual(ok(qs('bootstrap')).config.hse_sheet_id, HSE_ID_URL);
+  const e = err(qs('syncHse'), 'HSE_UNREACHABLE', 'id panjang tanpa akses');
+  assert.ok(e.details.some(d => /ID yang dipakai: abcdefghij/.test(d)) && e.details.some(d => /Pesan Google:/.test(d)));
+  ok(qs('saveConfig', { values: { hse_sheet_id: HSE_ID } }));
 });
 
 test('saveConfig: jam standar harus HH:MM', () => {
