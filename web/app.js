@@ -29,6 +29,10 @@ const S = {
   url: '', code: '', role: 'view', data: null, spkId: null, view: 'dash',
   pid: null, pdfPid: null, manPid: null, manOT: false, drafts: {}, offline: false, busy: 0
 };
+// versi API backend minimum yang dibutuhkan aplikasi ini (lihat API_VERSION di backend/Code.gs)
+const NEED_API = '1.1.0';
+const verLt = (a, b) => { const x = String(a || '0').split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== y[i]) return (x[i] || 0) < y[i]; } return false; };
+const backendOld = () => S.data && verLt(S.data.version, NEED_API);
 const mkErr = (code, message, details) => Object.assign(new Error(message), { code, details });
 
 /* ---------- API ---------- */
@@ -186,6 +190,7 @@ function banner() {
   const parts = [];
   if (off) parts.push('Tidak ada koneksi' + (S.cachedAt ? ' — menampilkan data per ' + new Date(S.cachedAt).toLocaleString('id-ID') : ''));
   if (n) parts.push(`${n} perubahan belum tersinkron <button class="btn sm" data-act="sync">Sinkronkan</button>`);
+  if (backendOld()) parts.push(`<b>Backend di Google Apps Script masih versi lama (${esc(S.data.version || '1.0.0')}, butuh ${NEED_API}).</b> Fitur baru (mis. pekerja harian) belum bisa dipakai. ${S.role === 'qs' ? 'Salin ulang semua file <code>.gs</code> dari folder backend, jalankan <code>setup</code>, lalu Deploy → Kelola deployment → edit → Versi baru.' : 'Minta QS memperbarui backend.'}`);
   el.innerHTML = parts.join(' · ');
 }
 
@@ -285,9 +290,12 @@ const ACT = {
   import: () => importDialog(),
   pdfimp: () => $('#pdfIn').click(),
   async savecfg() {
-    const values = {};
-    document.querySelectorAll('[data-cfg]').forEach(el => { values[el.dataset.cfg] = el.value; });
-    try { await api('saveConfig', { values }); toast('Pengaturan tersimpan', 'ok'); await reload(); } catch (e) { showErr(e); }
+    // kirim hanya yang berubah, supaya satu isian tidak menggagalkan yang lain
+    const values = {}, cfg = S.data.config;
+    document.querySelectorAll('[data-cfg]').forEach(el => { if (String(el.value) !== String(cfg[el.dataset.cfg] == null ? '' : cfg[el.dataset.cfg])) values[el.dataset.cfg] = el.value; });
+    if (!Object.keys(values).length) return toast('Tidak ada perubahan', 'ok');
+    try { await api('saveConfig', { values }); toast('Pengaturan tersimpan', 'ok'); await reload(); }
+    catch (e) { if (/Pengaturan tidak dikenal/.test(e.message)) e.message += ' — backend masih versi lama; perbarui file .gs lalu buat versi deployment baru'; showErr(e); }
   },
   async addm() { const n = await askText('Tambah mandor', 'Nama mandor'); if (!n) return; try { await api('saveMandor', { nama: n }); await reload(); } catch (e) { showErr(e); } },
   async renm(ds) { const m = S.data.mandor.find(x => x.id === ds.id); const n = await askText('Ubah nama mandor', 'Nama baru (sekarang: ' + m.nama + ')'); if (!n) return; try { await api('saveMandor', { id: ds.id, nama: n }); await reload(); } catch (e) { showErr(e); } },
